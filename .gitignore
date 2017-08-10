@@ -1,0 +1,7 @@
+.DS_Store
+*.jar
+*.war
+target/
+build/
+.settings/
+*.db
