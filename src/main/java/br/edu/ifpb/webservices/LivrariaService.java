@@ -1,83 +1,107 @@
 package br.edu.ifpb.webservices;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebService;
 
+import br.edu.ifpb.dao.DAO;
+import br.edu.ifpb.dao.LivroDAO;
+import br.edu.ifpb.entity.Livro;
+
 @WebService(serviceName = "LivrariaService")
 public class LivrariaService {
 
+	@PostConstruct
+	@WebMethod(exclude = true)
+	public void initializer() {
+		DAO.abrir();
+	}
+
+	@PreDestroy
+	@WebMethod(exclude = true)
+	public void finalizer() {
+		DAO.fechar();
+	}
+
 	// This methos will return the book id
 	@WebMethod(operationName = "cadastrar")
-	public int create(@WebParam(name = "titulo") String title, @WebParam(name = "editora") String editor,
-			@WebParam(name = "isbn") String isbn, @WebParam(name = "edicao") String edition,
+	public boolean create(@WebParam(name = "titulo") String title, @WebParam(name = "editora") String editor,
+			@WebParam(name = "isbn") String isbn, @WebParam(name = "edicao") Integer edition,
 			@WebParam(name = "autor") String author) {
 
-		if (title == null || editor == null || isbn == null || edition == null || author == null) {
-			return 0;
+		if (title.isEmpty() || editor.isEmpty() || isbn.isEmpty() || edition == null || author.isEmpty()) {
+			return false;
 		}
 
-		return 1;
+		Livro livro = new Livro(title, isbn, editor, edition, author);
+		LivroDAO dao = new LivroDAO();
+		dao.begin();
+		dao.persistir(livro);
+		dao.commit();
+
+		return true;
 	}
 
 	// This method find book by id
 	@WebMethod(operationName = "procurarPorId")
-	public String findById(@WebParam(name = "id") int id) {
+	public Livro findById(@WebParam(name = "id") int id) {
 
 		if (id == 0) {
-			return "Not found";
+			return null;
 		}
 
-		return String.format("Book by id %d", id);
+		LivroDAO dao = new LivroDAO();
+		Livro livro = dao.localizar(id);
+
+		return livro;
 	}
 
 	// This method find book by ISBN
 	@WebMethod(operationName = "procurarPorISBN")
-	public String findByISBN(@WebParam(name = "isbn") String isbn) {
-		if (isbn == null || isbn.equals("")) {
-			return "Please enter a valid ISBN";
+	public Livro findByISBN(@WebParam(name = "isbn") String isbn) {
+		if (isbn == null || isbn.isEmpty()) {
+			return null;
 		}
 
-		return String.format("Book by ISBN %s", isbn);
+		LivroDAO dao = new LivroDAO();
+		Livro livro = dao.findByISBN(isbn);
+
+		return livro;
 	}
 
-	// This method update a books title
-	@WebMethod(operationName = "atualizarTitulo")
-	public boolean updateTitle(@WebParam(name = "id") int id, @WebParam(name = "titulo") String title) {
-		if (id == 0) {
+	// This method update a books
+	@WebMethod(operationName = "atualizarLivro")
+	public boolean updateBook(@WebParam(name = "livro") Livro livro) {
+		if (livro == null || livro.getId() == 0) {
 			return false;
 		}
 
-		return true;
-	}
+		LivroDAO dao = new LivroDAO();
 
-	// This method update a books editor
-	@WebMethod(operationName = "atualizaEditora")
-	public boolean updateEditor(@WebParam(name = "id") int id, @WebParam(name = "editor") String editor) {
-		if (id == 0) {
+		if (dao.localizar(livro.getId()) == null) {
 			return false;
 		}
 
+		dao.begin();
+		dao.atualizar(livro);
+		dao.commit();
 		return true;
 	}
 
-	// This method update a books eidtion
-	@WebMethod(operationName = "atualizaEdicao")
-	public boolean updateEdition(@WebParam(name = "id") int id, @WebParam(name = "edition") String edition) {
-		if (id == 0) {
-			return false;
+	@WebMethod(operationName = "excluirLivro")
+	public String destroyBook(@WebParam(name = "livro") Livro livro) {
+		LivroDAO dao = new LivroDAO();
+
+		livro = dao.localizar(livro.getId());
+		if (livro == null) {
+			return "Livro não localizado";
 		}
+		dao.begin();
+		dao.apagar(livro);
+		dao.commit();
 
-		return true;
-	}
-
-	// This method update a books author
-	@WebMethod(operationName = "atualizaAutor")
-	public boolean updateAuthor(@WebParam(name = "id") int id, @WebParam(name = "autor") String author) {
-		if (id == 0) {
-			return false;
-		}
-
-		return true;
+		return livro.toString();
 	}
 }
