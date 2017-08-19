@@ -1,5 +1,6 @@
 package br.edu.ifpb.dao;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.persistence.Query;
@@ -23,5 +24,15 @@ public class LivroDAO extends DAO<Livro> {
 		}
 
 		return livros.get(0);
+	}
+	
+	public List<Livro> searchByISBN(String isbn) {
+		Query q = manager.createQuery("select l from Livro l where lower(l.isbn) like lower(:isbn)");
+		q.setParameter("isbn", "%"+isbn+"%");
+
+		@SuppressWarnings("unchecked")
+		List<Livro> livros = q.getResultList();
+
+		return livros;
 	}
 }
