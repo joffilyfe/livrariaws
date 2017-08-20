@@ -1,10 +1,15 @@
 package br.edu.ifpb.webservices;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebService;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementWrapper;
 
 import br.edu.ifpb.dao.DAO;
 import br.edu.ifpb.dao.LivroDAO;
@@ -26,16 +31,17 @@ public class LivrariaService {
 	}
 
 	// This methos will return the book id
-	@WebMethod(operationName = "cadastrar")
-	public boolean create(@WebParam(name = "titulo") String title, @WebParam(name = "editora") String editor,
-			@WebParam(name = "isbn") String isbn, @WebParam(name = "edicao") Integer edition,
-			@WebParam(name = "autor") String author) {
-
-		if (title.isEmpty() || editor.isEmpty() || isbn.isEmpty() || edition == null || author.isEmpty()) {
+	@WebMethod(operationName = "cadastrarLivro")
+	public boolean create(@WebParam(name = "livro") Livro livro) {
+		
+		if (livro == null || livro.getTitulo().isEmpty() ||
+			livro.getEditora().isEmpty() || livro.getIsbn().isEmpty() ||
+			livro.getEdicao() == null || livro.getAutor().isEmpty()) {
 			return false;
 		}
-
-		Livro livro = new Livro(title, isbn, editor, edition, author);
+		//evita um erro no SQLite
+		livro.setId(null);
+		
 		LivroDAO dao = new LivroDAO();
 		dao.begin();
 		dao.persistir(livro);
@@ -57,6 +63,21 @@ public class LivrariaService {
 
 		return livro;
 	}
+	
+	// This method search book by ISBN
+	@WebMethod(operationName = "pesquisarPorISBN")
+	public List<Livro> searchByISBN(@WebParam(name = "isbn") String isbn) {
+		List<Livro> livros = new ArrayList<Livro>();
+		
+		if (isbn == null || isbn.isEmpty()) {
+			return livros;
+		}
+
+		LivroDAO dao = new LivroDAO();
+		livros = dao.searchByISBN(isbn); 
+		
+		return livros;
+	}
 
 	// This method find book by ISBN
 	@WebMethod(operationName = "procurarPorISBN")
@@ -66,9 +87,8 @@ public class LivrariaService {
 		}
 
 		LivroDAO dao = new LivroDAO();
-		Livro livro = dao.findByISBN(isbn);
 
-		return livro;
+		return dao.findByISBN(isbn);
 	}
 
 	// This method update a books
@@ -91,17 +111,27 @@ public class LivrariaService {
 	}
 
 	@WebMethod(operationName = "excluirLivro")
-	public String destroyBook(@WebParam(name = "livro") Livro livro) {
+	public Livro destroyBook(@WebParam(name = "id") int id) {
 		LivroDAO dao = new LivroDAO();
-
-		livro = dao.localizar(livro.getId());
+		Livro livro = null;
+		
+		livro = this.findById(id);
 		if (livro == null) {
-			return "Livro não localizado";
+			return null;
 		}
 		dao.begin();
 		dao.apagar(livro);
 		dao.commit();
 
-		return livro.toString();
+		return livro;
 	}
+	
+    @WebMethod(operationName = "listarLivros")
+	public List<Livro> listBooks() {
+		List<Livro> books = null;
+		LivroDAO dao = new LivroDAO();
+		books = dao.listar();
+		return books;
+	}
+	
 }
